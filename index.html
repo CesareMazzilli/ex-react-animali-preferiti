@@ -8,6 +8,127 @@
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="text/babel">
+
+        const { useState } = React;
+
+        function Modal({
+      title, 
+      content, 
+      show = false, 
+      onClose = () => {},
+      onConfirm = () => {}
+  }){
+      return show && ReactDOM.createPortal(
+          <div className="modal-container">
+              <div className="modal">
+                  <h2>{title}</h2>
+                  {content}
+                  <div>
+                    <button onClick={onClose}>Annulla</button>
+                    <button onClick={onConfirm}>Conferma</button>
+                  </div>
+              </div>
+          </div>,
+          document.body
+      )
+  }
+
+        const ListaAnimali = () => {
+            const animalsChoices = ["Cane", "Gatto", "Pappagallo", "Cavallo", "Panda"];
+
+            const [animals, setAnimals] = useState([]);
+
+            const [show, setShow] = useState(false);
+
+            const [errorMessage, setErrorMessage] = useState('');
+
+            const [isLoading, setIsLoading] = useState(false);
+
+            const [animalName, setAnimalName] = useState('');
+
+            const addAnimal = async () => {
+                if(!animalName.trim()) return;
+                setIsLoading(true);
+                setErrorMessage('');
+                
+                try{
+                    const response = await fetch(`https://boolean-spec-frontend.vercel.app/freetestapi/animals?search=${animalName}`);
+                    const [animalData] = await response.json();
+                    if(!animalData){
+                        throw new Error('Nessun animale trovato');
+                    }
+                    const animal = {
+                        name: animalData.name || 'Nome non trovato',
+                        description: animalData.description || 'Descrizione non trovata',
+                        image: animalData.image || null
+                    }
+                    setAnimals(curr => [...curr, animal]);
+                    
+
+                }catch(err){
+                    console.error(err);
+                    const message = err.message === 'Nessun animale trovato' ? 'Nessun animale trovato' : 'Errore durante la ricerca dell\'animale';
+                    setErrorMessage(message);
+                }finally{
+                    setIsLoading(false);
+                    setAnimalName('');
+                    setShow(false);
+                }
+                
+                
+                
+                
+            }
+
+
+
+            return (<>
+            <button onClick={() => setShow(true)}>Aggiungi Animale Casuale</button>
+                <details>
+                    <summary>Animali</summary>
+                    <div>
+                        {errorMessage && <p style={{color: 'red'}}>{errorMessage}</p>}
+                        {animals.map((animal, i) => (
+                            <div key = {i} className="card">
+                              <div>
+                                 <h3>{animal.name}</h3>
+                                 <p>{animal.description}</p>
+                              </div>
+                              {animal.image &&
+                                <figure>
+                                   <img src={animal.image} alt={animal.name}/>
+                                </figure>
+                              }
+                            </div>
+                        ))}
+                    </div>
+                </details>
+                <Modal
+                   show={show}
+                   onClose={() => setShow(false)}
+                   onConfirm={addAnimal}
+                   title="Aggiungi Animale"
+                   content={<>
+                    <input
+                        type="text"
+                        required
+                        value={animalName}
+                        onChange={e => setAnimalName(e.target.value)}
+                        placeholder="Nome Animale"
+                    />
+                    {isLoading && <p>Caricando il risultato...</p>}
+                   </>}
+                />
+            </>)
+        }
+    </script>
+    <script type="text/babel">
+        const { createRoot } = ReactDOM;
+        const listaAnimali = document.querySelector('.lista-animali');
+        const root = createRoot(listaAnimali);
+        root.render(<ListaAnimali/>);
+    </script>
 </head>
 <body>
     <header>
@@ -19,153 +140,8 @@
         </figure>
         <div class="lista-animali"></div>
     </main>
-    <footer>
+      <footer>
       <p>Creato con amore da... un collega sbadato! 🐾</p>
     </footer>
-
-    <script type="text/babel">
-        const { useState } = React;
-
-        // Componente Modal
-        function Modal({ title, content, show = false, onClose = () => {}, onConfirm = () => {} }) {
-            return show && ReactDOM.createPortal(
-                <div className="modal-container">
-                    <div className="modal">
-                        <h2>{title}</h2>
-                        {content}
-                        <div className="modal-actions">
-                            <button onClick={onClose}>Annulla</button>
-                            <button onClick={onConfirm}>Conferma</button>
-                        </div>
-                    </div>
-                </div>,
-                document.body
-            );
-        }
-
-        // Componente Card Animale
-        function AnimalCard({ animal }) {
-            return (
-                <div className="animal-card">
-                    <h3>{animal.name}</h3>
-                    <img 
-                        src={animal.image || 'https://picsum.photos/400/300?animal'} 
-                        alt={animal.name} 
-                    />
-                    <p>{animal.description}</p>
-                </div>
-            );
-        }
-
-        // Componente principale Animali
-        function Animali() {
-            const [animals, setAnimals] = useState([]);
-            const [showModal, setShowModal] = useState(false);
-            const [newAnimal, setNewAnimal] = useState('');
-            const [isLoading, setIsLoading] = useState(false);
-            const [error, setError] = useState(null);
-            
-            const handleOpenModal = () => {
-                setError(null);
-                setShowModal(true);
-            };
-
-            const handleCloseModal = () => {
-                setShowModal(false);
-                setNewAnimal('');
-                setError(null);
-            };
-
-            const handleConfirmModal = async () => {
-                if (!newAnimal.trim()) return;
-                
-                setIsLoading(true);
-                setError(null);
-                
-                try {
-                    const response = await fetch(
-                        `https://boolean-spec-frontend.vercel.app/freetestapi/animals?search=${encodeURIComponent(newAnimal)}`
-                    );
-                    
-                    if (!response.ok) {
-                        throw new Error('Errore durante la ricerca dell\'animale');
-                    }
-                    
-                    const data = await response.json();
-                    
-                    if (!data || data.length === 0) {
-                        setError('Nessun animale trovato');
-                        return;
-                    }
-                    
-                    const firstAnimal = data[0];
-                    const animalData = {
-                        name: firstAnimal.name || newAnimal,
-                        description: firstAnimal.description || 'Descrizione non disponibile',
-                        image: firstAnimal.image || null
-                    };
-                    
-                    setAnimals([...animals, animalData]);
-                    setShowModal(false);
-                    setNewAnimal('');
-                } catch (err) {
-                    setError(err.message || 'Errore durante la ricerca dell\'animale');
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-
-            const handleInputChange = (e) => {
-                setNewAnimal(e.target.value);
-            };
-
-            const modalContent = (
-                <div>
-                    <input
-                        type="text"
-                        className="animal-input"
-                        placeholder="Cerca un animale (es. Leone, Tigre, etc.)"
-                        value={newAnimal}
-                        onChange={handleInputChange}
-                    />
-                    {isLoading && <p className="loading-message">Caricamento...</p>}
-                    {error && <p className="error-message">{error}</p>}
-                </div>
-            );
-
-            return (
-                <div>
-                    <button className="add-animal-btn" onClick={handleOpenModal}>
-                        Aggiungi Animale
-                    </button>
-                    
-                    <details open>
-                        <summary>Animali ({animals.length})</summary>
-                        <div>
-                            {animals.length === 0 ? (
-                                <p>Nessun animale aggiunto ancora</p>
-                            ) : (
-                                animals.map((animal, index) => (
-                                    <AnimalCard key={index} animal={animal} />
-                                ))
-                            )}
-                        </div>
-                    </details>
-                    
-                    <Modal
-                        title="Cerca un animale"
-                        content={modalContent}
-                        show={showModal}
-                        onClose={handleCloseModal}
-                        onConfirm={handleConfirmModal}
-                    />
-                </div>
-            );
-        }
-
-        // Montaggio del componente React
-        const root = ReactDOM.createRoot(document.querySelector('.lista-animali'));
-        root.render(<Animali />);
-    </script>
-</body>
+  </body>
 </html>
